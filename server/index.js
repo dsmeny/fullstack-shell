@@ -1,53 +1,66 @@
-import express from "express";
-import { db } from "./db.js";
+import express from 'express'
+import { db } from './db.js'
 
-const app = express();
-const PORT = process.env.PORT ?? 3001;
+const app = express()
+const PORT = process.env.PORT ?? 3001
 
-app.use(express.json());
+app.use(express.json())
 
-app.get("/api/hello", async (req, res) => {
+app.get('/api/hello', async (req, res) => {
   try {
-    const result = await db.execute("SELECT 'Hello from Turso' AS message");
-    res.json({ message: result.rows[0].message });
+    const result = await db.execute("SELECT 'Hello from Turso' AS message")
+    res.json({ message: result.rows[0].message })
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Database query failed" });
+    console.error(err)
+    res.status(500).json({ error: 'Database query failed' })
   }
-});
+})
 
-app.get("/api/users", async (req, res) => {
+app.get('/api/users', async (req, res) => {
   try {
     const result = await db.execute(
-      "SELECT id, name, email, created_at FROM users ORDER BY id"
-    );
-    res.json(result.rows);
+      'SELECT id, name, email, created_at FROM users ORDER BY id',
+    )
+    res.json(result.rows)
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Database query failed" });
+    console.error(err)
+    res.status(500).json({ error: 'Database query failed' })
   }
-});
+})
 
-app.post("/api/users", async (req, res) => {
-  const { name, email } = req.body ?? {};
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const result = await db.execute({
+      sql: 'SELECT id, name, email, created_at FROM users WHERE id = ?',
+      args: [req.params.id],
+    })
+    res.json(result.rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Database query failed' })
+  }
+})
+
+app.post('/api/users', async (req, res) => {
+  const { name, email } = req.body ?? {}
   if (!name || !email) {
-    return res.status(400).json({ error: "name and email are required" });
+    return res.status(400).json({ error: 'name and email are required' })
   }
   try {
     const result = await db.execute({
-      sql: "INSERT INTO users (name, email) VALUES (?, ?) RETURNING id, name, email, created_at",
+      sql: 'INSERT INTO users (name, email) VALUES (?, ?) RETURNING id, name, email, created_at',
       args: [name, email],
-    });
-    res.status(201).json(result.rows[0]);
+    })
+    res.status(201).json(result.rows[0])
   } catch (err) {
-    if (err.code === "SQLITE_CONSTRAINT" || /UNIQUE/.test(err.message)) {
-      return res.status(409).json({ error: "email already exists" });
+    if (err.code === 'SQLITE_CONSTRAINT' || /UNIQUE/.test(err.message)) {
+      return res.status(409).json({ error: 'email already exists' })
     }
-    console.error(err);
-    res.status(500).json({ error: "Database query failed" });
+    console.error(err)
+    res.status(500).json({ error: 'Database query failed' })
   }
-});
+})
 
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
-});
+  console.log(`API listening on http://localhost:${PORT}`)
+})
